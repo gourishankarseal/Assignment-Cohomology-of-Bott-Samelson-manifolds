@@ -1,7 +1,7 @@
            	                             
 			                       MAPLE: 
 
-1)Open the maple program Assignments-new.mw. From the top down View menu select Collapse all Sections.  
+1)Install MAPLE and open the maple program Assignments-new.mw. From the top down View menu select Collapse all Sections.  
 
 
 2) Expand Section titled: "Defines the word and the Bott-Samelson"
