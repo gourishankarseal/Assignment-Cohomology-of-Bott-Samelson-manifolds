@@ -1,0 +1,248 @@
+# This program computes assignment cohomology for Bott-Samelson manifolds:
+> 
+# 
+# 
+# Load Coxeter package
+# 
+# 
+> restart; read "coxeter2.4v.txt"; with(queue); with(coxeter);
+coxeter and weyl 2.4v loaded.
+Run 'withcoxeter()' or 'withweyl()' to use abbreviated names.
+> 
+# 
+# 
+
+# Load other packages:
+> with(LinearAlgebra); with(GraphTheory); with(SpecialGraphs); with(ListTools); interface(rtablesize = 1024); with(ArrayTools); with(PolynomialIdeals); with(Groebner); with(combinat); with(combinat, cartprod);
+> 
+# 
+# 
+# `and`(Defines*the*word, the*Bott-Samelson);
+# 
+# 
+> STRING := [1, 2, 1]; Lietype := A3; Morse := 0; d := NumElems(STRING); variables := [x, y, z, u, v, w]; dvar := numelems(variables); Bs := []; for i to d do Bs := [op(Bs), variables[STRING[i]]] end do; print("The defining word:", STRING, "Length of the word:", d, "Lietype", Lietype, "The Bott-Samelson is:", Bs);
+  "The defining word:", [1, 2, 1], "Length of the word:", 3, 
+
+    "Lietype", A3, "The Bott-Samelson is:", [x, y, x]
+> 
+# 
+# Define Root System for a given Lietype
+# 
+> ROOT := base(Lietype); r := NumElems(ROOT); Cartan := cartan_matrix(Lietype); Root := array(1 .. r); for i to r do Root[i] := variables[i] end do; print("Lietype", Lietype, "Simple roots", ROOT, "Rank", r, "Cartan Matrix", Cartan, "Array of simple roots", Root);
+"Lietype", A3, "Simple roots", [e2 - e1, e3 - e2, e4 - e3], 
+
+  "Rank", 3, "Cartan Matrix", Cartan, "Array of simple roots", 
+
+  Root
+> 
+# 
+# 
+# Prints*the*fixed*points;
+# 
+# 
+> s := {}; for i to d-1 do s := [op(s), {0, 1}] end do; T := cartprod([[0, 1], op(s)]); FP := array(1 .. 2^d); for i to 2^d do FP[i] := T[nextvalue](); print(i, "=", FP[i]) end do; FixedPoints := Matrix(1 .. 2^d, 1 .. 1); for i to 2^d do FixedPoints[i, 1] := FP[i] end do;
+                       1, "=", [0, 0, 0]
+                       2, "=", [0, 0, 1]
+                       3, "=", [0, 1, 0]
+                       4, "=", [0, 1, 1]
+                       5, "=", [1, 0, 0]
+                       6, "=", [1, 0, 1]
+                       7, "=", [1, 1, 0]
+                       8, "=", [1, 1, 1]
+> 
+> unassign('s');
+# 
+# Builds the word corresponding to the Bott-Samelson (BS) parsing from left to right from ROOT and STRING;
+# 
+> BS := array(1 .. d); for i to d do BS[i] := ROOT[STRING[d-i+1]] end do; print(BS);
+                               BS
+> 
+# 
+# `and`(Weight*Matrix*WEIGHT, `in`(WEIGHTC, terms*of*root*coords*at*all*the*fixed*points));
+# 
+> WEIGHT := Matrix(1 .. 2^d, 1 .. d); WEIGHTC := Matrix(1 .. 2^d, 1 .. d); for j to 2^d do for i to d do if FP[j][i] = 1 then WEIGHT[j, i] := reflect(BS[i], BS[i]); WEIGHTC[j, i] := root_coords(WEIGHT[j, i], Lietype) else WEIGHT[j, i] := BS[i]; WEIGHTC[j, i] := root_coords(WEIGHT[j, i], Lietype) end if; for k from i-1 by -1 to 1 do if FP[j][k] = 1 then WEIGHT[j, i] := reflect(BS[k], WEIGHT[j, i]); WEIGHTC[j, i] := root_coords(WEIGHT[j, i], Lietype) end if end do end do end do; print("Weight matrix", WEIGHT); print("-------------------------------------------------------------------------------"); print("Weight matrix in root coordinates", WEIGHTC);
+            "Weight matrix",Matrix(%id = 4302815880)
+"---------------------------------------------------------------\
+
+  ----------------"
+  "Weight matrix in root coordinates",Matrix(%id = 4310132120)
+> 
+# 
+# `in`(Weight*Matrix, terms*of*x), y, z*et*c;
+# 
+# 
+> FixedPointsBinary := Matrix(1 .. 2^d, 1 .. 1); for i to 2^d do FixedPointsBinary[i, 1] := FP[i] end do; FixedPointsBinary; Weightmatrix := Matrix(1 .. 2^d, 1 .. d); for i to 2^d do for j to d do for k to r do Weightmatrix[i, j] := Weightmatrix[i, j]+WEIGHTC[i, j][k]*Root[k] end do end do end do; Weightmatrix := simplify(factor(Weightmatrix)); for i to 2^d do print(i, FixedPointsBinary[i, 1], Row(Weightmatrix, i)) end do;
+            1,[0,0,0],Vector[row](%id = 4310132616)
+            2,[0,0,1],Vector[row](%id = 4310228544)
+            3,[0,1,0],Vector[row](%id = 4365224240)
+            4,[0,1,1],Vector[row](%id = 4365224376)
+            5,[1,0,0],Vector[row](%id = 4365257296)
+            6,[1,0,1],Vector[row](%id = 4365257432)
+            7,[1,1,0],Vector[row](%id = 4365290472)
+            8,[1,1,1],Vector[row](%id = 4365290608)
+> 
+# Converts the fixed points from arrays to vectors  ;
+> for i to 2^NumElems(STRING) do V[i] := Vector[row](FP[i]) end do;
+# 
+# 
+# Computing the 1 skeleton of the Bott-Samelson      ;
+# 
+> A := Vector[row](1 .. 2^d); B := Vector[row](1 .. 2^d); C := Matrix(1 .. 2^d, 1 .. d); for i to 2^d do for j to 2^d do if Norm(V[i]-V[j], 2) = 1 then for k from d by -1 to 1 do if WEIGHT[i, k] = -WEIGHT[j, k] then A[j] := [i, j, WEIGHT[i, k]] end if end do end if end do; B := Vector([sort(A)]); for t to d do C[i, t] := B[t+2^d-d] end do; Fill(0, A) end do; print("The one skeleton of the Bott-Samelson graph", C);
+"The one skeleton of the Bott-Samelson graph",Matrix(%id = 43652\
+
+  90744)
+> 
+> 
+# Reflection*subroutine;
+# 
+# 
+# 
+# 
+> NULL;
+> with(ListTools);
+> ;
+> f := proc (a) return a/factors(a)[1] end proc;
+> refdegreeonemonomial := proc (a, b, R::array) local i, j, t, k; i := Search(a, R); t := 0; if type(b, constant) = true then return b end if; j := Search(op(1, f(b)), R); t := simplify(f(b)-Cartan[j, i]*a); return simplify(factors(b)[1]*t) end proc;
+> reflinear := proc (a, b, R::array) local i::integer, j::integer, t, k, l, s, d, m, n, u, q; t := 0; if type(b, constant) = true then return b end if; for k to nops(f(b)) do t := simplify(t+refdegreeonemonomial(a, op(k, f(b)), R)) end do; return factors(b)[1]*t end proc;
+> ref := proc (a, b, R::array) local i::integer, j::integer, t, k, l, s, d, m, n, u, q; s := 1; d := 1; if type(b, constant) = true then return b end if; if degree(f(b)) = 1 then return reflinear(a, b, R) end if; if 2 <= degree(f(b)) then for n to (1/2)*NumElems(factors(f(b))[2]) do m := factors(f(b))[2][n][2]; for l to m do d := d*reflinear(a, factors(f(b))[2][n][1], R) end do end do end if; return simplify(factors(b)[1]*d) end proc;
+> 
+# 
+# List of repititions in Bott-Samelson, Bs:
+> Var := Matrix(1 .. dvar, 1 .. 1); for i to dvar do Var[i, 1] := variables[i] end do; Listvar := Matrix(1 .. dvar, 1 .. 1); Listvarrepeat := Matrix(1 .. dvar, 1 .. 1); for i to dvar do Listvar[i, 1] := []; Listvarrepeat[i, 1] := [] end do; for i to dvar do if SearchAll(variables[i], Bs) <> NULL then Listvar[i, 1] := [SearchAll(variables[i], Bs)]; Listvarrepeat[i, 1] := Listvar[i, 1][2 .. -1] end if end do; print("Variables", Var, "Repitition position", Listvarrepeat);
+"Variables",Matrix(%id = 4365291240),"Repitition position",Matrix(%id = 
+
+  4365291528)
+# 
+# 
+# 
+# Generating assignment basis and equivariant basis
+> with(MTM); M := Matrix(1 .. 1, 1 .. 1); M[1, 1] := 1; M1 := Matrix(1 .. 1, 1 .. 1); M1[1, 1] := 1; for p to d do A := Matrix(1 .. 2^p, 1 .. 2^p); S := Matrix(1 .. 2^(p-1), 1 .. 2^(p-1)); Q := Matrix(1 .. 2^(p-1), 1 .. 2^(p-1)); Q1 := Matrix(1 .. 2^(p-1), 1 .. 2^(p-1)); T := Matrix(1 .. 2^(p-1), 1 .. 2^(p-1)); W := Matrix(1 .. 2^(p-1), 1 .. 2^(p-1)); H := Matrix(1 .. 2^p, 1 .. 2^p); Z := Matrix(1 .. 2^p, 1 .. 2^p); S1 := Matrix(1 .. 2^(p-1), 1 .. 2^(p-1)); N := 0; for s to dvar do if Search(p, Listvarrepeat[s, 1]) > 0 then N := Search(p, Listvarrepeat[s, 1]); t := Var[s, 1] end if end do; for i to 2^(p-1) do for j to 2^(p-1) do if N > 0 then S[i, j] := convert(`PolynomialRemainder[M[i,j],t,t]`, FromMma, evaluate) else S[i, j] := M[i, j] end if end do end do; S := factor(simplify(S)); S1 := convert(rref(S), Matrix); print("rref mod basis of previous dimension", S1); den := 1; rrefcounter := 0; for i to RowDimension(S1) do for j to ColumnDimension(S1) do if type(S1[i, j], 'polynom') = false then print("WARNING : rref produces rational function at", i, j); rrefcounter := 1; den := lcm(den, denom(S1[i, j])) end if end do; S1 := RowOperation(S1, i, den); den := 1 end do; if rrefcounter = 1 then print("Modified rref", S1) end if; rrefcounter := 0; for i to 2^(p-1) do for j to 2^(p-1) do if S1[i, j] = 1 then if j <> i then for k to 2^(p-1) do T[j, k] := S1[i, k] end do else for k to 2^(p-1) do T[j, k] := S1[j, k] end do end if; j := 2^(p-1); break end if end do end do; for i to 2^(p-1) do for j to 2^(p-1) do if j <> i then T[i, j] := -T[i, j] end if end do end do; for i to 2^(p-1) do T[i, i] := Bs[p]*T[i, i] end do; for i to 2^(p-1) do if T[i, i] = 0 then T[i, i] := 1 end if end do; T := factor(simplify(T)); print("Affine trans T", T); for i to 2^(p-1) do Z[i, i] := 1; for j to 2^(p-1) do Z[i+2^(p-1), j+2^(p-1)] := T[i, j]/Bs[p] end do end do; Z := factor(simplify(Z)); for i to 2^(p-1) do for j to 2^(p-1) do Q[i, j] := ref(Bs[p], M[i, j], Root) end do end do; Q := factor(simplify(Q)); for i to 2^(p-1) do for j to 2^(p-1) do Q1[i, j] := ref(Bs[p], M1[i, j], Root) end do end do; Q1 := factor(simplify(Q1)); for i to 2^(p-1) do for j to 2^(p-1) do H[i, j] := M1[i, j]; H[i+2^(p-1), j] := Q1[i, j]; H[i+2^(p-1), j+2^(p-1)] := Bs[p]*Q1[i, j] end do end do; H := factor(simplify(H)); print("Equivariant Basis", H); W := factor(simplify(Q.T)); for j to 2^(p-1) do for k to 2^(p-1) do A[k, j] := M[k, j]; A[k+2^(p-1), j] := Q[k, j]; A[k+2^(p-1), j+2^(p-1)] := W[k, j] end do end do; print("Assignment Basis", A); M := factor(simplify(A)); M1 := factor(simplify(H)); print("dimension", p, "------------") end do;
+"rref mod basis of previous dimension",Matrix(%id = 4365291816)
+           "Affine trans T",Matrix(%id = 4365291968)
+          "Equivariant Basis",Matrix(%id = 4365292120)
+          "Assignment Basis",Matrix(%id = 4365292272)
+                  "dimension",1,"------------"
+"rref mod basis of previous dimension",Matrix(%id = 4365292560)
+           "Affine trans T",Matrix(%id = 4365292712)
+          "Equivariant Basis",Matrix(%id = 4365292864)
+          "Assignment Basis",Matrix(%id = 4365293160)
+                  "dimension",2,"------------"
+"rref mod basis of previous dimension",Matrix(%id = 4365293456)
+           "Affine trans T",Matrix(%id = 4365293752)
+          "Equivariant Basis",Matrix(%id = 4365326840)
+          "Assignment Basis",Matrix(%id = 4365326216)
+                 "dimension", 3, "------------"
+> 
+# 
+# 
+# 
+# Non*Cohomological*assignments;
+# 
+> N := 0; n := 0; noncohpositions := []; for i to 2^d do Msol1 := LinearSolve(H, Column(A, i), method = 'none'); for k to NumElems(Msol1) do if type(Msol1[k], 'polynom') = false then n := n+1; break end if end do; if n > 0 then for k to NumElems(Msol1) do if Msol1[k] <> 0 then noncohpositions := [op(noncohpositions), [Msol1[k], FP[k]]] end if end do; print("Assignment", Column(A, i), "corresponding to vertex", FP[i], " is non-cohomological and is a non-poly combination of the cohomological assignments with coefficients", noncohpositions); N := N+1; noncohpositions := [] else  end if; n := 0 end do; print("There are total ", N, "non-cohomological assignments");
+"Assignment",Vector[column](%id = 4365361768),
+
+  "corresponding to vertex",[1,1,1],
+
+  " is non-cohomological and is a non-poly combination of the 
+
+                                                [[       y       
+   cohomological assignments with coefficients",[[uminus0-,[1,0,1
+                                                [[       x       
+
+   ] [1        ]]
+  ]],[-,[1,1,1]]]
+   ] [x        ]]
+     "There are total ", 1, "non-cohomological assignments"
+> 
+# 
+# 
+# Set of all vertices
+# 
+# 
+
+> vertices := {}; setofvertices := Matrix(1 .. 2^d, 1 .. 1); for i to 2^d do vertices := `union`(vertices, {i}); setofvertices[i, 1] := i end do;
+> 
+# 
+# 
+# MORSE*THEORY; `and`(Polarization*of*the*Bott-Samelson*graph, generating*the*system*of*linear*equations);
+> L := permute(r+1); print("------------------------------------"); xi := 0; h := 1; for i to r+1 do xi := xi+L[h][i]*cat(e, i) end do; print("Generic direction", xi, "chamber", h); if h = 1 then print("FUNDAMENTAL CHAMBER") end if; G := Digraph(2^d); for i to 2^d do for j to NumElems(STRING) do if iprod(C[i][j][3], xi) > 0 then AddArc(G, {[C[i][j][1], C[i][j][2]]}) end if end do end do; print(DrawGraph(G, style = circle)); print("Is G Acyclic", IsAcyclic(G)); print("---- chosing positive orientation for all the edges of the Graph----");
+> index := Vector[column](1 .. 2^d); for i to 2^d do for j to d do if iprod(WEIGHT[i][j], xi) <> 0 then  else print(xi, "is not generic", iprod(WEIGHT[i][j], xi), "TROUBLE") end if end do end do;
+> for i to 2^d do index[i] := 0 end do; for i to 2^d do for j to d do if iprod(WEIGHT[i][j], xi) < 0 then index[i] := index[i]+1 end if end do end do; print("At vertex", FixedPoints, "Index", index); for i to numelems(index) do if index[i] = 0 then lowestvertex := i; print("Lowest vertex", lowestvertex) end if end do; AllPairs := AllPairsDistance(G); print("All pairs shortest distance", AllPairs); row := Row(AllPairs, lowestvertex); print("Row of all pairs distance from lowest vertex", row); distancecompare := Matrix(1 .. 2^d, 1 .. 1); for i to 2^d do distancecompare[i, 1] := {} end do; for p to 2^d do for j to 2^d do if Row(AllPairs, p)[j] = infinity then distancecompare[p, 1] := `union`(distancecompare[p, 1], {j}) end if end do end do; print("Distance compare", distancecompare); print("----------------------");
+> for p to 2^d do m := numelems(distancecompare[p, 1]); n := 2^d; param := n-m; Cancoeff := Matrix(1 .. m, 1 .. n); b := Matrix(1 .. m, 1 .. 1); for i to m do for j to n do Cancoeff[i, j] := Column(A, j)[distancecompare[p, 1][i]] end do end do; if Morse = 1 then ExportMatrix(cat("test", p), transpose(Cancoeff), delimiter = ",") end if end do; print("---------------------------------------------END OF CHAMBER", h, "----------------------------------------------------------------------------------------------------");
+> if Morse = 1 then ExportMatrix("A", transpose(A), delimiter = ",") end if;
+L:=[[1,2,3,4],[1,2,4,3],[1,3,2,4],[1,3,4,2],[1,4,2,3],[1,4,3,2],[
+
+  2,1,3,4],[2,1,4,3],[2,3,1,4],[2,3,4,1],[2,4,1,3],[2,4,3,1],[3,1
+
+  ,2,4],[3,1,4,2],[3,2,1,4],[3,2,4,1],[3,4,1,2],[3,4,2,1],[4,1,2,
+
+  3],[4,1,3,2],[4,2,1,3],[4,2,3,1],[4,3,1,2],[4,3,2,1]]
+             "------------------------------------"
+       "Generic direction",e1+2 e2+3 e3+4 e4,"chamber",1
+                     "FUNDAMENTAL CHAMBER"
+
+                      "Is G Acyclic",true
+  "---- chosing positive orientation for all the edges of the 
+
+     Graph----"
+"At vertex",Matrix(%id = 4365361904),"Index",Vector[column](%id = 
+
+  4365360736)
+                       "Lowest vertex",1
+     "All pairs shortest distance",Matrix(%id = 4365361008)
+"Row of all pairs distance from lowest vertex",Vector[row](%id = 
+
+  4365361160)
+          "Distance compare",Matrix(%id = 4365396384)
+                    "----------------------"
+"---------------------------------------------END OF CHAMBER", 1, "----------------------------------------------------------------------------------------------------"
+> ;
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+# 
+# 
+# 
+# 
+# 
+# 
+
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
